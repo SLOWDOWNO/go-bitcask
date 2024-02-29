@@ -7,7 +7,7 @@ import (
 	"github.com/google/btree"
 )
 
-// 索引接口，方便接入其他的数据结构
+// Indexer 索引接口，方便接入其他的数据结构
 type Indexer interface {
 	// 向索引中存储key对应的数据位置信息
 	Put(key []byte, pos *data.LogRecordPos) bool
@@ -25,7 +25,7 @@ type Item struct {
 	pos *data.LogRecordPos
 }
 
-// 实现Google btree的Item接口
+// Less 实现Google btree的Item接口
 func (ai *Item) Less(bi btree.Item) bool {
 	return bytes.Compare(ai.key, bi.(*Item).key) == -1
 }

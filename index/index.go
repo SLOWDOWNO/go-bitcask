@@ -9,13 +9,13 @@ import (
 
 // Indexer 索引接口，方便接入其他的数据结构
 type Indexer interface {
-	// 向索引中存储key对应的数据位置信息
-	Put(key []byte, pos *data.LogRecordPos) bool
+	// Put 向索引中存储key对应的数据位置信息
+	Put(key []byte, pos *data.LogRecordPos) *data.LogRecordPos
 
-	// 根据key取出对应的索引位置信息
+	// Get 根据key取出对应的索引位置信息
 	Get(key []byte) *data.LogRecordPos
 
-	// 根据key删除对应的索引位置信息
+	// Delete 根据key删除对应的索引位置信息
 	Delete(key []byte) bool
 }
 

@@ -290,7 +290,7 @@ func (db *DB) loadIndexFromDataFile() error {
 			dataFile = db.oldFiles[fileId]
 		}
 
-		var offset uint64 = 0
+		var offset int64 = 0
 		// 处理每个文件中的数据项
 		for {
 			logRecord, size, err := dataFile.ReadLogRecord(offset)

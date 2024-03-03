@@ -5,7 +5,7 @@ type Options struct {
 	DirPath string
 
 	// 数据文件的大小
-	DataFileSize uint64
+	DataFileSize int64
 
 	// 内存索引类型
 	IndexType IndexerType

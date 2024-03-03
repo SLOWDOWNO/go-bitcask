@@ -9,6 +9,7 @@ const (
 	LogRecordDelete
 )
 
+// LogRecord磁盘中数据记录的结构体
 type LogRecord struct {
 	Key   []byte
 	Value []byte

@@ -2,7 +2,10 @@ package data
 
 import "go-bitcask/fio"
 
-// DataFile 数据文件
+const DataFileNameSuffix = ".data"
+
+// DataFile 磁盘中数据文件的结构体
+// 会有多个磁盘文件
 type DataFile struct {
 	FileId    uint32        // 文件id
 	WriteOff  uint64        // 文件写到哪个位置
@@ -16,9 +19,9 @@ func OpenDataFile(dirPath string, fileId uint32) (*DataFile, error) {
 }
 
 // ReadLogRecord根据 偏移量 读取数据文件
-func (df *DataFile) ReadLogRecord(offset uint64) (*LogRecord, error) {
+func (df *DataFile) ReadLogRecord(offset uint64) (*LogRecord, uint64, error) {
 	// TODO
-	return nil, nil
+	return nil, 0, nil
 }
 
 // Write 将buf写入数据文件

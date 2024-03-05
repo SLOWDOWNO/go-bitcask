@@ -22,7 +22,7 @@ type DB struct {
 	index      index.Indexer             // 内存索引
 }
 
-// Open 打开bitcask存储引擎实例
+// Open 打开bitcask存储引擎实例并返回
 func Open(options Options) (*DB, error) {
 	// 校验用户传入的配置项
 	if err := checkOptions(options); err != nil {
@@ -207,7 +207,8 @@ func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.LogRecordPos, er
 // 在使用此方法前必须持有互斥锁
 func (db *DB) setActiveDataFile() error {
 	var initialLFileId uint32 = 0
-	if db.activeFile == nil {
+	// 当前存在活跃文件的情况
+	if db.activeFile != nil {
 		initialLFileId = db.activeFile.FileId + 1
 	}
 	// 打开新的数据文件
@@ -215,6 +216,7 @@ func (db *DB) setActiveDataFile() error {
 	if err != nil {
 		return err
 	}
+	// 更新当前文件为活跃文件
 	db.activeFile = dataFile
 	return nil
 }

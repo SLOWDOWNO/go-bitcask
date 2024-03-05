@@ -24,6 +24,7 @@ type DataFile struct {
 }
 
 // OpenDataFile 打开新的数据文件
+// 返回 一个数据文件实例和 error
 func OpenDataFile(dirPath string, fileId uint32) (*DataFile, error) {
 	fileName := filepath.Join(dirPath, fmt.Sprintf("%09d", fileId)+DataFileNameSuffix)
 
@@ -41,6 +42,7 @@ func OpenDataFile(dirPath string, fileId uint32) (*DataFile, error) {
 }
 
 // ReadLogRecord 根据 offset 从 Datafile 读取 LogRecord
+// 返回对应的 logRecord 和它的 长度以及 error
 func (df *DataFile) ReadLogRecord(offset int64) (*LogRecord, int64, error) {
 	fileSize, err := df.IoManager.Size()
 	if err != nil {

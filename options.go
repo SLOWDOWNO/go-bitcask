@@ -1,5 +1,7 @@
 package gobitcask
 
+import "os"
+
 type Options struct {
 	// 数据库存放数据的目录
 	DirPath string
@@ -23,3 +25,10 @@ const (
 	// ART 自适应基数树索引
 	ART
 )
+
+var DefaultOption = Options{
+	DirPath:      os.TempDir(),
+	DataFileSize: 256 * 1024 * 1024, // 256MB
+	IndexType:    BTree,
+	syncWrite:    false,
+}

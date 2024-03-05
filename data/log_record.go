@@ -71,6 +71,7 @@ func EncodeLogRecord(logRecord *LogRecord) ([]byte, int64) {
 	crc := crc32.ChecksumIEEE(encBytes[4:])
 	binary.LittleEndian.PutUint32(encBytes[:4], crc)
 
+	// fmt.Printf("header lenth: %d, crc : %d\n", index, crc)
 	return encBytes, int64(size)
 }
 
@@ -99,15 +100,18 @@ func decodeLogRecordHeader(buf []byte) (*logRecordHeader, int64) {
 	return header, int64(index)
 }
 
-// getLogRecordCRC 返回 LogRecord 中的 crc 值
+// getLogRecordCRC 返回 LogRecord 中的 crc 值，
+// 要加上 key 和 value 字段的一起算
 func getLogRecordCRC(lr *LogRecord, header []byte) uint32 {
 	if lr == nil {
 		return 0
 	}
 
+	// 此处 debug 时候很久才发现 crc 没有更新成功：
+	// Update 之后没有穿回去：xcrc32.Update(crc, crc32.IEEETable, lr.Key)
 	crc := crc32.ChecksumIEEE(header[:])
-	crc32.Update(crc, crc32.IEEETable, lr.Key)
-	crc32.Update(crc, crc32.IEEETable, lr.Value)
+	crc = crc32.Update(crc, crc32.IEEETable, lr.Key)
+	crc = crc32.Update(crc, crc32.IEEETable, lr.Value)
 
 	return crc
 }

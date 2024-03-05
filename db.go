@@ -78,7 +78,7 @@ func (db *DB) Put(key []byte, value []byte) error {
 	}
 
 	// 更新内存索引
-	if ok := db.index.Put(key, pos); ok != nil {
+	if ok := db.index.Put(key, pos); !ok {
 		return ErrIndexUpdateFaild
 	}
 

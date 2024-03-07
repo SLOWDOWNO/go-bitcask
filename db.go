@@ -127,12 +127,18 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 		return nil, ErrKeyNotFound
 	}
 
+	// 从数据文件中获取 value
+	return db.getValueByPosition(logRecordPos)
+}
+
+// 根据索引信息获取对应的 value
+func (db *DB) getValueByPosition(pos *data.LogRecordPos) ([]byte, error) {
 	// 根据文件id找到对应数据文件
 	var dataFile *data.DataFile
-	if db.activeFile.FileId == logRecordPos.Fid {
+	if db.activeFile.FileId == pos.Fid {
 		dataFile = db.activeFile
 	} else {
-		dataFile = db.oldFiles[logRecordPos.Fid]
+		dataFile = db.oldFiles[pos.Fid]
 	}
 
 	// 数据文件为空
@@ -141,7 +147,7 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	}
 
 	// 根据偏移量读取对应的数据
-	logRecord, _, err := dataFile.ReadLogRecord(logRecordPos.Offset)
+	logRecord, _, err := dataFile.ReadLogRecord(pos.Offset)
 	if err != nil {
 		return nil, err
 	}

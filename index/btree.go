@@ -51,6 +51,11 @@ func (bt *BTree) Delete(key []byte) bool {
 	return oldItem != nil
 }
 
+// Size 索引中的数据大小
+func (bt *BTree) Size() int {
+	return bt.tree.Len()
+}
+
 // Iterator 返回索引迭代器
 func (bt *BTree) Iterator(reverse bool) Iterator {
 	if bt.tree == nil {

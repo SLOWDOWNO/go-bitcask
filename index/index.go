@@ -20,6 +20,9 @@ type Indexer interface {
 
 	// Iterator 返回索引迭代器
 	Iterator(reverse bool) Iterator
+
+	// Size 索引中的数据
+	Size() int
 }
 
 type IndexType = int8

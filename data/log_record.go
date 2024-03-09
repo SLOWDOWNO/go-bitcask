@@ -12,6 +12,7 @@ type LogRecordType = byte
 const (
 	LogRecordNormal LogRecordType = iota
 	LogRecordDelete
+	LogRecordTxnFinished
 )
 
 // crc type key_size value_size
@@ -38,6 +39,12 @@ type LogRecordPos struct {
 	Fid    uint32 // 文件id， 标识数据在哪个文件
 	Offset int64  // 偏移量，数据在数据文件中的位置
 	// Size   int32 // 标识数据在磁盘上的大小
+}
+
+// TranscationRecord 暂存事务的相关数据
+type TranscationRecord struct {
+	Record *LogRecord
+	Pos    *LogRecordPos
 }
 
 // EncodeLogRecord 对 LogRecord 进行编码，返回编码后的数据和对应长度

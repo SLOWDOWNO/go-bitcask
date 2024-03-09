@@ -16,6 +16,23 @@ type Options struct {
 	syncWrite bool
 }
 
+// IteratorOptions 迭代器配置项
+type IteratorOptions struct {
+	// 遍历前缀为指定值的 key，默认为空
+	Prefix []byte
+
+	// 是否反向迭代， 默认 false 正向迭代
+	Reverse bool
+}
+
+// WriteBatchOptions 批量写配置项
+type WriteBatchOptions struct {
+	// 一个批次当中最大的数据量
+	MaxBatchNum uint
+	// 提交时是否 sync 持久化
+	SyncWrites bool
+}
+
 type IndexerType = int8
 
 const (
@@ -31,4 +48,14 @@ var DefaultOption = Options{
 	DataFileSize: 256 * 1024 * 1024, // 256MB
 	IndexType:    BTree,
 	syncWrite:    false,
+}
+
+var DefaultIteratorOption = IteratorOptions{
+	Prefix:  nil,
+	Reverse: false,
+}
+
+var DefaultWriteBatchOptions = WriteBatchOptions{
+	MaxBatchNum: 10000,
+	SyncWrites:  true,
 }

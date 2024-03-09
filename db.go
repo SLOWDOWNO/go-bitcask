@@ -20,6 +20,7 @@ type DB struct {
 	activeFile *data.DataFile            // 当前唯一的活跃数据文件
 	oldFiles   map[uint32]*data.DataFile // 旧的数据文件
 	index      index.Indexer             // 内存索引
+	seqNo      uint64                    // 事务序列号， 全局递增
 }
 
 // Open 打开bitcask存储引擎实例并返回
@@ -98,13 +99,13 @@ func (db *DB) Put(key []byte, value []byte) error {
 
 	// 构造LogRecord结构体
 	logRecord := &data.LogRecord{
-		Key:   key,
+		Key:   logRecordKeyWithSeq(key, nonTransactionSeqNo),
 		Value: value,
 		Type:  data.LogRecordNormal,
 	}
 
 	// 追加写入到活跃文件
-	pos, err := db.appendLogRecord(logRecord)
+	pos, err := db.appendLogRecordWithLock(logRecord)
 	if err != nil {
 		return err
 	}
@@ -130,9 +131,12 @@ func (db *DB) Delete(key []byte) error {
 	}
 
 	// 构造LogRecord，标识数据已被删除
-	logRecord := &data.LogRecord{Key: key, Type: data.LogRecordDelete}
+	logRecord := &data.LogRecord{
+		Key:  logRecordKeyWithSeq(key, nonTransactionSeqNo),
+		Type: data.LogRecordDelete,
+	}
 	// 写入数据文件
-	_, err := db.appendLogRecord(logRecord)
+	_, err := db.appendLogRecordWithLock(logRecord)
 	if err != nil {
 		return nil
 	}
@@ -222,11 +226,15 @@ func (db *DB) getValueByPosition(pos *data.LogRecordPos) ([]byte, error) {
 	return logRecord.Value, nil
 }
 
-// 追加写入数据到活跃文件
-func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.LogRecordPos, error) {
+// appendLogRecordWithLock 加锁版本的追加写入数据到活跃文件
+func (db *DB) appendLogRecordWithLock(logRecord *data.LogRecord) (*data.LogRecordPos, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	return db.appendLogRecord(logRecord)
+}
 
+// appendLogRecord 追加写入数据到活跃文件
+func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.LogRecordPos, error) {
 	// 判断当前活跃文件是否存在，因为数据库在没有写入的时候是没有文件生成的
 	// 如果不存在初始化数据文件
 	if db.activeFile == nil {
@@ -350,6 +358,22 @@ func (db *DB) loadIndexFromDataFile() error {
 		return nil
 	}
 
+	updateIndex := func(key []byte, typ data.LogRecordType, pos *data.LogRecordPos) {
+		var ok bool
+		if typ == data.LogRecordDelete {
+			ok = db.index.Delete(key)
+		} else {
+			ok = db.index.Put(key, pos)
+		}
+		if !ok {
+			panic("failed to update index at startup")
+		}
+	}
+
+	// 暂存事务数据
+	transcationRecords := make(map[uint64][]*data.TranscationRecord)
+	var currentSeqNo = nonTransactionSeqNo
+
 	// 遍历所有的文件id，处理文件中的记录
 	for i, fid := range db.fileIds {
 		var fileId = uint32(fid)
@@ -373,10 +397,31 @@ func (db *DB) loadIndexFromDataFile() error {
 
 			// 构造内存索引并保存
 			logRecordPos := &data.LogRecordPos{Fid: fileId, Offset: offset}
-			if logRecord.Type == data.LogRecordDelete {
-				db.index.Delete(logRecord.Key)
+
+			// 解析 key，拿到事务序列号
+			realKey, seqNo := parseLogRecordKey(logRecord.Key)
+			if seqNo == nonTransactionSeqNo {
+				// 非事务提交，直接更新内存索引
+				updateIndex(realKey, logRecord.Type, logRecordPos)
 			} else {
-				db.index.Put(logRecord.Key, logRecordPos)
+				// 事务完成，对应的 seq no 的数据可以更新到内存索引中
+				if logRecord.Type == data.LogRecordTxnFinished {
+					for _, txnRecord := range transcationRecords[seqNo] {
+						updateIndex(txnRecord.Record.Key, txnRecord.Record.Type, txnRecord.Pos)
+					}
+					delete(transcationRecords, seqNo)
+				} else {
+					logRecord.Key = realKey
+					transcationRecords[seqNo] = append(transcationRecords[seqNo], &data.TranscationRecord{
+						Record: logRecord,
+						Pos:    logRecordPos,
+					})
+				}
+			}
+
+			// 更新事务序列号
+			if seqNo > currentSeqNo {
+				currentSeqNo = seqNo
 			}
 
 			// 递增offset，下一次从新的位置开始读取
@@ -388,5 +433,8 @@ func (db *DB) loadIndexFromDataFile() error {
 			db.activeFile.WriteOff = offset
 		}
 	}
+
+	// 更新事务序列号
+	db.seqNo = currentSeqNo
 	return nil
 }

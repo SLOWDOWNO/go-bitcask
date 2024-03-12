@@ -84,5 +84,5 @@ func TestDB_WriteBatch2(t *testing.T) {
 	assert.Equal(t, ErrKeyNotFound, err)
 
 	// 校验事务序列号
-	assert.Equal(t, 2, db.seqNo)
+	assert.Equal(t, uint64(2), db.seqNo)
 }

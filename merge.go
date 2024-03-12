@@ -157,7 +157,7 @@ func (db *DB) getMergePath() string {
 func (db *DB) loadMergeFiles() error {
 	mergePath := db.getMergePath()
 	// merge 目录不存在直接返回
-	if _, err := os.Stat(mergePath); os.IsExist(err) {
+	if _, err := os.Stat(mergePath); os.IsNotExist(err) {
 		return nil
 	}
 	defer func() {

@@ -39,8 +39,8 @@ const (
 	// BTree 索引
 	BTree IndexerType = iota + 1
 
-	// ART 自适应基数树索引
-	ART
+	// B+Tree 索引, 索引在磁盘上
+	BPlusTree
 )
 
 var DefaultOption = Options{

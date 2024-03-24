@@ -25,7 +25,7 @@ func destroyDB(db *DB) {
 
 func TestDB_Open(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-open")
 	t.Log(dir)
 	opts.DirPath = dir
 	db, err := Open(opts)
@@ -36,7 +36,7 @@ func TestDB_Open(t *testing.T) {
 
 func TestDB_Put(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-put")
 	opts.DirPath = dir
 	opts.DataFileSize = 64 * 1024 * 1024
 	db, err := Open(opts)
@@ -92,7 +92,7 @@ func TestDB_Put(t *testing.T) {
 
 func TestDB_Get(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-get")
 	opts.DirPath = dir
 	opts.DataFileSize = 64 * 1024 * 1024
 	db, err := Open(opts)
@@ -164,7 +164,7 @@ func TestDB_Get(t *testing.T) {
 
 func TestDB_Delete(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-delete")
 	opts.DirPath = dir
 	opts.DataFileSize = 64 * 1024 * 1024
 	db, err := Open(opts)
@@ -216,9 +216,9 @@ func TestDB_Delete(t *testing.T) {
 	assert.Equal(t, value1, value2)
 }
 
-func TestDN_ListLeys(t *testing.T) {
+func TestDN_ListKeys(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-listkeys")
 	opts.DirPath = dir
 	db, err := Open(opts)
 	defer destroyDB(db)
@@ -250,7 +250,7 @@ func TestDN_ListLeys(t *testing.T) {
 
 func TestDB_Fold(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-fold")
 	opts.DirPath = dir
 	db, err := Open(opts)
 	defer destroyDB(db)
@@ -272,7 +272,7 @@ func TestDB_Fold(t *testing.T) {
 
 func TestDB_Close(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-close")
 	opts.DirPath = dir
 	db, err := Open(opts)
 	defer destroyDB(db)
@@ -287,7 +287,7 @@ func TestDB_Close(t *testing.T) {
 
 func TestDB_Sync(t *testing.T) {
 	opts := DefaultOption
-	dir, _ := os.MkdirTemp("", "bitcask-go")
+	dir, _ := os.MkdirTemp("", "bitcask-go-sync")
 	opts.DirPath = dir
 	db, err := Open(opts)
 	defer destroyDB(db)
@@ -299,4 +299,25 @@ func TestDB_Sync(t *testing.T) {
 
 	err = db.Sync()
 	assert.Nil(t, err)
+}
+
+func TestDB_FileLock(t *testing.T) {
+	opts := DefaultOption
+	dir, _ := os.MkdirTemp("", "bitcask-go-filelock")
+	opts.DirPath = dir
+	db, err := Open(opts)
+	// defer destroyDB(db)
+	assert.Nil(t, err)
+	assert.NotNil(t, db)
+
+	db2, err := Open(opts)
+	assert.Nil(t, db2)
+	assert.Equal(t, ErrDatabaseIsUsing, err)
+
+	destroyDB(db)
+
+	db3, err := Open(opts)
+	assert.NotNil(t, db3)
+	assert.Nil(t, err)
+	defer destroyDB(db3)
 }

@@ -2,6 +2,7 @@ package gobitcask
 
 import (
 	"errors"
+	"fmt"
 	"go-bitcask/data"
 	"go-bitcask/index"
 	"io"
@@ -11,6 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/gofrs/flock"
+)
+
+const (
+	fileLockName = "flock"
 )
 
 // DB bitcask 存储引擎实例
@@ -23,6 +30,7 @@ type DB struct {
 	index      index.Indexer             // 内存索引
 	seqNo      uint64                    // 事务序列号， 全局递增
 	isMerging  bool                      // 是否正在 merge
+	fileLock   *flock.Flock              // 文件锁, 保证多进程之间的互斥
 }
 
 // Open 打开bitcask存储引擎实例并返回
@@ -39,12 +47,23 @@ func Open(options Options) (*DB, error) {
 		}
 	}
 
+	// 判断当前数据目录是否正在使用
+	fileLock := flock.New(filepath.Join(options.DirPath, fileLockName))
+	hold, err := fileLock.TryLock()
+	if err != nil {
+		return nil, err
+	}
+	if !hold {
+		return nil, ErrDatabaseIsUsing
+	}
+
 	// 初始化DB实例结构体
 	db := &DB{
 		options:  options,
 		mu:       new(sync.RWMutex),
 		oldFiles: make(map[uint32]*data.DataFile),
 		index:    index.NewIndexer(options.IndexType, options.DirPath, options.syncWrite),
+		fileLock: fileLock,
 	}
 
 	// 加载 merge 数据目录
@@ -75,6 +94,12 @@ func Open(options Options) (*DB, error) {
 
 // Close 关闭数据库
 func (db *DB) Close() error {
+	defer func() {
+		if err := db.fileLock.Unlock(); err != nil {
+			panic(fmt.Sprintf("failed to unlock the directory, %v", err))
+		}
+	}()
+
 	if db.activeFile != nil {
 		return nil
 	}

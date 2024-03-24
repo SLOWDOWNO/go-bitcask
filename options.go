@@ -17,6 +17,9 @@ type Options struct {
 
 	// 累计写到一定阈值再进行持久化
 	BytesPerSync uint
+
+	// 启动时是否需要以 mmap 的方式加载
+	MMapAtStartup bool
 }
 
 // IteratorOptions 迭代器配置项
@@ -47,11 +50,12 @@ const (
 )
 
 var DefaultOption = Options{
-	DirPath:      os.TempDir(),
-	DataFileSize: 256 * 1024 * 1024, // 256MB
-	IndexType:    BTree,
-	SyncWrite:    false,
-	BytesPerSync: 0,
+	DirPath:       os.TempDir(),
+	DataFileSize:  256 * 1024 * 1024, // 256MB
+	IndexType:     BTree,
+	SyncWrite:     false,
+	BytesPerSync:  0,
+	MMapAtStartup: true,
 }
 
 var DefaultIteratorOption = IteratorOptions{

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go-bitcask/data"
+	"go-bitcask/fio"
 	"go-bitcask/index"
 	"io"
 	"os"
@@ -87,6 +88,13 @@ func Open(options Options) (*DB, error) {
 		// 从数据文件中构建索引
 		if err := db.loadIndexFromDataFile(); err != nil {
 			return nil, err
+		}
+
+		// 重置 IO 类型为 标准文件IO
+		if db.options.MMapAtStartup {
+			if err := db.resetIOType(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -338,7 +346,7 @@ func (db *DB) setActiveDataFile() error {
 		initialLFileId = db.activeFile.FileId + 1
 	}
 	// 打开新的数据文件
-	dataFile, err := data.OpenDataFile(db.options.DirPath, initialLFileId)
+	dataFile, err := data.OpenDataFile(db.options.DirPath, initialLFileId, fio.StandardFIO)
 	if err != nil {
 		return err
 	}
@@ -387,7 +395,11 @@ func (db *DB) loadDataFile() error {
 
 	// 遍历每个文件Id，打开对应的数据文件
 	for i, fid := range fileIds {
-		dataFile, err := data.OpenDataFile(db.options.DirPath, uint32(fid))
+		ioType := fio.StandardFIO
+		if db.options.MMapAtStartup {
+			ioType = fio.MemoryMap
+		}
+		dataFile, err := data.OpenDataFile(db.options.DirPath, uint32(fid), ioType)
 		if err != nil {
 			return err
 		}
@@ -501,5 +513,22 @@ func (db *DB) loadIndexFromDataFile() error {
 
 	// 更新事务序列号
 	db.seqNo = currentSeqNo
+	return nil
+}
+
+// resetIOType 将数据文件的IO类型设置为标准文件IO
+func (db *DB) resetIOType() error {
+	if db.activeFile == nil {
+		return nil
+	}
+	if err := db.activeFile.SetIOManager(db.options.DirPath, fio.StandardFIO); err != nil {
+		return err
+	}
+
+	for _, datafile := range db.oldFiles {
+		if err := datafile.SetIOManager(db.options.DirPath, fio.StandardFIO); err != nil {
+			return err
+		}
+	}
 	return nil
 }

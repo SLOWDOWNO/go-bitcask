@@ -29,30 +29,30 @@ type DataFile struct {
 
 // OpenDataFile 打开新的数据文件
 // 返回 一个数据文件实例和 error
-func OpenDataFile(dirPath string, fileId uint32) (*DataFile, error) {
+func OpenDataFile(dirPath string, fileId uint32, ioType fio.FileIOType) (*DataFile, error) {
 	fileName := GetDatafleName(dirPath, fileId)
-	return newDataFile(fileName, fileId)
+	return newDataFile(fileName, fileId, ioType)
 }
 
 // OpenHintFile 打开 Hint 索引文件
 func OpenHintFile(dirPath string) (*DataFile, error) {
 	fileName := filepath.Join(dirPath, DataFileNameSuffix)
-	return newDataFile(fileName, 0)
+	return newDataFile(fileName, 0, fio.StandardFIO)
 }
 
 // OpenMergeFinishedFile 打开标识 merge 完成的文件
 func OpenMergeFinishedFile(dirPath string) (*DataFile, error) {
 	fileName := filepath.Join(dirPath, MergeFinishedFileName)
-	return newDataFile(fileName, 0)
+	return newDataFile(fileName, 0, fio.StandardFIO)
 }
 
 func GetDatafleName(dirPath string, fileId uint32) string {
 	return filepath.Join(dirPath, fmt.Sprintf("%09d", fileId)+DataFileNameSuffix)
 }
 
-func newDataFile(fileName string, fileId uint32) (*DataFile, error) {
+func newDataFile(fileName string, fileId uint32, ioType fio.FileIOType) (*DataFile, error) {
 	// 初始化 IOManager 接口
-	ioManager, err := fio.NewIOManager(fileName)
+	ioManager, err := fio.NewIOManager(fileName, ioType)
 	if err != nil {
 		return nil, err
 	}
@@ -154,4 +154,17 @@ func (df *DataFile) readNBytes(n int64, offset int64) (b []byte, err error) {
 	b = make([]byte, n)
 	_, err = df.IoManager.Read(b, offset)
 	return
+}
+
+// SetIOManager 重置IO类型为标准文件IO
+func (df *DataFile) SetIOManager(dirPath string, ioType fio.FileIOType) error {
+	if err := df.IoManager.Close(); err != nil {
+		return err
+	}
+	ioManager, err := fio.NewIOManager(GetDatafleName(dirPath, df.FileId), ioType)
+	if err != nil {
+		return err
+	}
+	df.IoManager = ioManager
+	return nil
 }

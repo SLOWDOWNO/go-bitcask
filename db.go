@@ -6,6 +6,7 @@ import (
 	"go-bitcask/data"
 	"go-bitcask/fio"
 	"go-bitcask/index"
+	"go-bitcask/utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -137,6 +138,14 @@ func (db *DB) Sync() error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	return db.activeFile.Sync()
+}
+
+// Backup 备份数据库, 将数据文件拷贝到新的目录
+func (db *DB) Backup(dir string) error {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	return utils.CopyDir(db.options.DirPath, dir, []string{fileLockName})
 }
 
 // Put 写入Key-Value数据，key不能为空

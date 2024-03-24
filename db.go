@@ -44,7 +44,7 @@ func Open(options Options) (*DB, error) {
 		options:  options,
 		mu:       new(sync.RWMutex),
 		oldFiles: make(map[uint32]*data.DataFile),
-		index:    index.NewIndexer(options.IndexType),
+		index:    index.NewIndexer(options.IndexType, options.DirPath, options.syncWrite),
 	}
 
 	// 加载 merge 数据目录
@@ -57,14 +57,17 @@ func Open(options Options) (*DB, error) {
 		return nil, err
 	}
 
-	// 从 hint file 加载索引
-	if err := db.loadIndexFromHintFile(); err != nil {
-		return nil, err
-	}
+	// B+树索引不需要从数据文件中加载
+	if options.IndexType != BPlusTree {
+		// 从 hint file 加载索引
+		if err := db.loadIndexFromHintFile(); err != nil {
+			return nil, err
+		}
 
-	// 从数据文件中构建索引
-	if err := db.loadIndexFromDataFile(); err != nil {
-		return nil, err
+		// 从数据文件中构建索引
+		if err := db.loadIndexFromDataFile(); err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil

@@ -60,7 +60,7 @@ func Benchmark_Delete(b *testing.B) {
 
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < b.N; i++ {
-		err := db.Delete(utils.GetTestKey(i))
+		err := db.Delete(utils.GetTestKey(rand.Int()))
 		assert.Nil(b, err)
 	}
 }

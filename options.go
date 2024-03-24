@@ -13,7 +13,10 @@ type Options struct {
 	IndexType IndexerType
 
 	// 每次写数据是否持久化
-	syncWrite bool
+	SyncWrite bool
+
+	// 累计写到一定阈值再进行持久化
+	BytesPerSync uint
 }
 
 // IteratorOptions 迭代器配置项
@@ -47,7 +50,8 @@ var DefaultOption = Options{
 	DirPath:      os.TempDir(),
 	DataFileSize: 256 * 1024 * 1024, // 256MB
 	IndexType:    BTree,
-	syncWrite:    false,
+	SyncWrite:    false,
+	BytesPerSync: 0,
 }
 
 var DefaultIteratorOption = IteratorOptions{

@@ -22,15 +22,16 @@ const (
 
 // DB bitcask 存储引擎实例
 type DB struct {
-	options    Options
-	mu         *sync.RWMutex
-	fileIds    []int                     // 文件id只能在加载索引的时候使用
-	activeFile *data.DataFile            // 当前唯一的活跃数据文件
-	oldFiles   map[uint32]*data.DataFile // 旧的数据文件
-	index      index.Indexer             // 内存索引
-	seqNo      uint64                    // 事务序列号， 全局递增
-	isMerging  bool                      // 是否正在 merge
-	fileLock   *flock.Flock              // 文件锁, 保证多进程之间的互斥
+	options     Options
+	mu          *sync.RWMutex
+	fileIds     []int                     // 文件id只能在加载索引的时候使用
+	activeFile  *data.DataFile            // 当前唯一的活跃数据文件
+	oldFiles    map[uint32]*data.DataFile // 旧的数据文件
+	index       index.Indexer             // 内存索引
+	seqNo       uint64                    // 事务序列号， 全局递增
+	isMerging   bool                      // 是否正在 merge
+	fileLock    *flock.Flock              // 文件锁, 保证多进程之间的互斥
+	bytesWrites uint                      // 累计写了多少个字节 用于持久化策略
 }
 
 // Open 打开bitcask存储引擎实例并返回
@@ -62,7 +63,7 @@ func Open(options Options) (*DB, error) {
 		options:  options,
 		mu:       new(sync.RWMutex),
 		oldFiles: make(map[uint32]*data.DataFile),
-		index:    index.NewIndexer(options.IndexType, options.DirPath, options.syncWrite),
+		index:    index.NewIndexer(options.IndexType, options.DirPath, options.SyncWrite),
 		fileLock: fileLock,
 	}
 
@@ -307,10 +308,19 @@ func (db *DB) appendLogRecord(logRecord *data.LogRecord) (*data.LogRecordPos, er
 		return nil, err
 	}
 
+	db.bytesWrites += uint(size)
 	// 根据用户配置决定是否持久化
-	if db.options.syncWrite {
+	var needSync = db.options.SyncWrite
+	if !needSync && db.options.BytesPerSync > 0 && db.bytesWrites >= db.options.BytesPerSync {
+		needSync = true
+	}
+	if needSync {
 		if err := db.activeFile.Sync(); err != nil {
 			return nil, err
+		}
+		// 清空累计写入值
+		if db.bytesWrites > 0 {
+			db.bytesWrites = 0
 		}
 	}
 

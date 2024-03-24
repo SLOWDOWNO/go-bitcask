@@ -73,7 +73,7 @@ func (db *DB) Merge() error {
 	// 打开一个新的临时 bitcask 实例
 	mergeOption := db.options
 	mergeOption.DirPath = mergePath
-	mergeOption.syncWrite = false
+	mergeOption.SyncWrite = false
 	mergeDB, err := Open(mergeOption)
 	if err != nil {
 		return err
